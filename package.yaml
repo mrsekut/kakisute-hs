@@ -22,6 +22,8 @@ description: Please see the README on GitHub at <https://github.com/githubuser/k
 dependencies:
   - base >= 4.7 && < 5
   - mtl
+  - linear-base
+  - text
 
 library:
   source-dirs: src

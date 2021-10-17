@@ -30,7 +30,8 @@ library
       Generic
       IxStateMonad
       Lib
-      LinearType
+      LinearType.LinearType
+      LinearType.Resource
       Traverse
       TypeFamily
       Unfold
@@ -40,7 +41,9 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , linear-base
     , mtl
+    , text
   default-language: Haskell2010
 
 executable kakisute-hs-exe
@@ -53,7 +56,9 @@ executable kakisute-hs-exe
   build-depends:
       base >=4.7 && <5
     , kakisute-hs
+    , linear-base
     , mtl
+    , text
   default-language: Haskell2010
 
 test-suite kakisute-hs-test
@@ -67,5 +72,7 @@ test-suite kakisute-hs-test
   build-depends:
       base >=4.7 && <5
     , kakisute-hs
+    , linear-base
     , mtl
+    , text
   default-language: Haskell2010
