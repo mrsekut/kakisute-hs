@@ -32,6 +32,9 @@ library
       Lib
       LinearType.LinearType
       LinearType.Resource
+      Record.NamedFieldPuns
+      Record.OverloadedLabels
+      Record.Record
       Traverse
       TypeFamily
       Unfold
