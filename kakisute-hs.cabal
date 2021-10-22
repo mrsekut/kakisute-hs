@@ -35,6 +35,7 @@ library
       Record.NamedFieldPuns
       Record.OverloadedLabels
       Record.Record
+      Sort.QuickSort
       Traverse
       TypeFamily
       Unfold
