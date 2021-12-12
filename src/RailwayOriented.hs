@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 
 module RailwayOriented where
+
 import Data.Text ( Text, toLower )
 import Data.Text qualified as T
 import Control.Monad ((>=>))

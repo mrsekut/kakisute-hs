@@ -36,6 +36,7 @@ library
       RailwayOriented
       Record.NamedFieldPuns
       Record.OverloadedLabels
+      Record.OverloadedRecordDot
       Record.Record
       Sort.MergeSort
       Sort.QuickSort
