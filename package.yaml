@@ -24,6 +24,7 @@ dependencies:
   - mtl
   - linear-base
   - text
+  - lens
 
 library:
   source-dirs: src
