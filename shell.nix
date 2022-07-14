@@ -4,15 +4,16 @@
 
 let
   pkgs = import <nixpkgs> { };
-  cabal = pkgs.haskellPackages.cabal-install;
-  ghc = pkgs.haskell.packages.${compiler}.ghcWithPackages (hpkgs: with hpkgs; [
-  ]);
+  ghc = pkgs.haskell.packages.${compiler};
+  cabal = ghc.cabal-install;
+  ghcWithPackages = ghc.ghcWithPackages (hpkgs: with hpkgs; [ ]);
 
 in pkgs.mkShell {
-  nativeBuildInputs = with pkgs; [
+  buildInputs = with pkgs; [
     cabal
-    ghc
+    ghcWithPackages
     stack
     hlint
+    haskell-language-server
   ];
 }
