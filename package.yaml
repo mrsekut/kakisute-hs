@@ -25,6 +25,7 @@ dependencies:
   - linear-base
   - text
   - lens
+  - parallel
 
 library:
   source-dirs: src
