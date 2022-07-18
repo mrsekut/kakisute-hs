@@ -26,6 +26,8 @@ dependencies:
   - text
   - lens
   - parallel
+  - array
+  - deepseq
 
 library:
   source-dirs: src
