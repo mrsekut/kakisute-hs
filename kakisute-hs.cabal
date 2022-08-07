@@ -25,9 +25,11 @@ source-repository head
 
 library
   exposed-modules:
+      Bell
       DDD
       ExtEff
       Foldable
+      GDP
       Generic
       IxStateMonad
       Lens
@@ -42,6 +44,7 @@ library
       Record.Record
       Sort.MergeSort
       Sort.QuickSort
+      ST
       Sudoku.Run
       Sudoku.Sudoku
       Traverse
@@ -54,6 +57,7 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , deepseq
     , lens
     , linear-base
@@ -72,6 +76,7 @@ executable kakisute-hs-exe
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , deepseq
     , kakisute-hs
     , lens
@@ -92,6 +97,7 @@ test-suite kakisute-hs-test
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , deepseq
     , kakisute-hs
     , lens
