@@ -7,12 +7,17 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
 
-module GDP where
+module GDP.GDP where
 
 import Data.Coerce ( coerce, Coercible )
 import qualified Data.List as L
 import Data.Ord ( Down(Down), comparing )
+import Data.Map (Map)
 
 
 
@@ -53,16 +58,16 @@ sortBy :: ((a -> a -> Ordering) ~~ comp)
 sortBy comp xs = coerce (L.sortBy (the comp) xs)
 
 
-mergeBy :: ((a -> a -> Ordering) ~~ comp)
+mergeBy' :: ((a -> a -> Ordering) ~~ comp)
         -> SortedBy comp [a]
         -> SortedBy comp [a]
         -> SortedBy comp [a]
-mergeBy comp xs ys =
-        coerce (mergeBy' (the comp) (the xs) (the ys))
+mergeBy' comp xs ys =
+        coerce (mergeBy (the comp) (the xs) (the ys))
 
 
-mergeBy' :: (a -> a -> Ordering) -> [a] -> [a] -> [a]
-mergeBy' comp = go
+mergeBy :: (a -> a -> Ordering) -> [a] -> [a] -> [a]
+mergeBy comp = go
   where
   go [] ys'          = ys'
   go xs' []          = xs'
@@ -78,28 +83,40 @@ gdpMain = do
   name (comparing Down) $ \gt -> do
     let xs' = sortBy gt xs
         ys' = sortBy gt ys
-    print (the (mergeBy gt xs' ys'))
+    print (the (mergeBy' gt xs' ys'))
 
 
 
-main :: IO ()
-main = do
-  let xs = [1..5]
-      ys = reverse [1..5]
-      gt = comparing Down
-  print (mergeBy' gt xs ys)
+-- main :: IO ()
+-- main = do
+--   let xs = [1..5]
+--       ys = reverse [1..5]
+--       gt = compare
+--   print mergeBy gt xs ys)
 
 
-minimum_O1:: SortedBy comp [a]-> Maybe a
-minimum_O1 xs = case the xs of
-  []    -> Nothing
-  (x:_) -> Just x
+-- minimum_O1:: SortedBy comp [a]-> Maybe a
+-- minimum_O1 xs = case the xs of
+--   []    -> Nothing
+--   (x:_) -> Just x
 
 
--- comp指定してないから、miniumの結果5になって違うじゃん
-miss :: IO ()
-miss = do
-  let xs = reverse [1..5]
-  name (comparing Down) $ \gt -> do
-    let xs' = sortBy gt xs
-    print (minimum_O1 xs')
+-- -- comp指定してないから、miniumの結果5になって違うじゃん
+-- miss :: IO ()
+-- miss = do
+--   let xs = reverse [1..5]
+--   name (comparing Down) $ \gt -> do
+--     let xs' = sortBy gt xs
+--     print (minimum_O1 xs')
+
+
+
+-- 使用
+-- gdpEndpts = do
+--   putSrtLn "Enter a non-empty list of integers:"
+--   xs <- readLn
+--   name xs $ \xs -> case classify xs of
+--     IsCons proof ->
+--       return (gdpHead (xs            ...proofs),
+--           ddpHead (gdpReverse xs ...rev_cons proof))
+--     IsNil proof -> gdpEndpts

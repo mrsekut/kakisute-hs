@@ -29,7 +29,8 @@ library
       DDD
       ExtEff
       Foldable
-      GDP
+      GDP.GDP
+      GDP.Head
       Generic
       IxStateMonad
       Lens
