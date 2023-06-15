@@ -1,4 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Lens where
 
