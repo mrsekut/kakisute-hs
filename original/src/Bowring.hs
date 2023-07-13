@@ -23,11 +23,10 @@ data NormalFrame
   deriving (Show)
 
 data LastFrame
-  = OpenL (Roll, Roll)
-  | SpareAndStrike
-  | TripleStrikes
+  = Two (Roll, Roll)
+  | Thr (Roll, Roll, Roll)
   deriving (Show)
-
+-- TODO: まあ、[Roll]だけでも良さげ..
 
 
 -- >>> score [3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 5]
@@ -43,9 +42,11 @@ score rolls = d
     d = score' <$> c
 
 
+-- TODO: やっぱこれが微妙なんだよなあ..
+-- TODO: 書き換え案1: Stateモナド
 data PendingFrame
-  = Done Frame
-  | Pend Roll
+  = Done Frame -- TODO: ここのFrame参照されてない？
+  | Pend [Roll]
   deriving (Show)
 
 type Index = Int
@@ -53,26 +54,30 @@ type Index = Int
 -- NOTE: 先頭に追加して、最後にreverseする
 roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
 roll [] cur  = (:[]) <$> mkFrame1 cur
--- TODO: 第1引数のlengthでLastかどうか判断できる？
--- TODO: clean
-roll ps@(last:tail) cur = do
-  a <- case last of
-    Done _        -> mkFrame1 cur
-    Pend prevRoll -> mkFrame2 prevRoll cur
+roll ps@(last:tail) cur
+  | length ps == 9 && isDone last = undefined -- 10frameの初回。pendに追加するだけ
+  | length ps == 10 = undefined -- 10frameの2 or 3回目
+  | otherwise = do
+    -- TODO: clean
+    a <- case last of
+      Done _            -> mkFrame1 cur
+      Pend (prevRoll:_) -> mkFrame2 prevRoll cur
 
-  return $ case a of
-    Done _ -> a:tail
-    Pend _ -> a:ps
+    return $ case a of
+      Done _ -> a:tail
+      Pend _ -> a:ps
 
 
 
+-- TODO: 知りすぎ？ それならwhere無いでもいいかも？
 mkFrame1 :: (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame1 (idx,r1)
   | r1 == 10           = pure $ Done $ Normal Strike
-  | 0 <= r1 && r1 < 10 = pure $ Pend r1
+  | 0 <= r1 && r1 < 10 = pure $ Pend [r1]
   | otherwise          = Left $ InvalidRoll idx r1
 
 
+-- TODO: 知りすぎ？
 mkFrame2 :: Roll -> (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame2 r1 (idx,r2)
   | r1 + r2 == 10 = pure $ Done $ Normal $ Spare r1
