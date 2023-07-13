@@ -1,4 +1,5 @@
 module Bowling (score, BowlingError(..)) where
+import           Control.Applicative (Applicative (..))
 import           Control.Monad
 
 
@@ -30,22 +31,17 @@ data LastFrame
 
 
 
--- >>> score [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
--- Left IncompleteGame
+-- >>> score [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 3, 7]
+-- Right 17
+score :: [Roll] -> Either BowlingError Int
 score rolls = do
     let a = indexedFoldM roll [] rolls
     b <- reverse <$> a
     c <- mapM unwrapPendingFrame b
     d <- validateFrameCount c
     pure $ score' d
--- score :: [Roll] -> Either BowlingError Int
 -- TODO: clean
 
-
-validateFrameCount :: [Frame] -> Either BowlingError [Frame]
-validateFrameCount fs = if length fs >= 10
-  then pure fs
-  else Left IncompleteGame
 
 -- TODO: やっぱこれが微妙なんだよなあ..
 -- TODO: 書き換え案1: Stateモナド
@@ -71,23 +67,23 @@ roll [] cur  = (:[]) <$> mkFrame1 cur
 roll ps@(last:tail) (idx,roll)
   | length ps == 9 && isDone last = do
       -- 10 frame目の1投目
-      r <- is1 (idx,roll)
+      r <- validateRoll1 (idx,roll)
       pure $ Pend [r] : ps
   | length ps == 10 = case last of
       Done _ -> Left $ InvalidRoll idx roll -- lastが0 0 0
       Pend [p]   -> if p + roll < 10
         then do
           -- 10frameの2投目 2投で終了
-          r <- is1 (idx,roll)
+          r <- validateRoll1 (idx,roll)
           pure $ Done (LastC [p,r]) : tail
         else do
           -- 10frameの2投目 3投目がある
-          r <- is1 (idx,roll)
+          r <- validateRoll1 (idx,roll)
           pure $ Pend [p,r] : tail
       Pend [p,q] -> do
           -- 10frame目 3投で終了
-          r <- is1 (idx,roll)
-          rs <- is3 p q (idx,roll)
+          r <- validateRoll1 (idx,roll)
+          rs <- validateRoll3 p q (idx,r)
           pure $ Done (LastC rs) : tail
 
     --  Pend [p,q] -> pure $ Done (LastC [p,q,roll]) : tail
@@ -102,16 +98,7 @@ roll ps@(last:tail) (idx,roll)
     isDone _        = False
 
 
--- TODO: where?
-is1 :: (Index, Roll) -> Either BowlingError Roll
-is1 (idx,r1)
-  | 0 <= r1 && r1 <= 10 = pure r1
-  | otherwise          = Left $ InvalidRoll idx r1
-
-
-
-
--- TODO: where?, is1に置き換え
+-- TODO: where?, validateRoll1に置き換え
 mkFrame1 :: (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame1 (idx,r1)
   | r1 == 10           = pure $ Done StrikeC
@@ -120,25 +107,7 @@ mkFrame1 (idx,r1)
 
 
 
-is2 :: Roll -> (Index, Roll) -> Either BowlingError [Roll]
-is2 r1 (idx,r2)
-  | r1 + r2 <= 10  = pure [r1, r2]
-  | otherwise     = Left $ InvalidRoll idx r2
-
-
--- TODO: 前提があって変
-is3 :: Roll -> Roll -> (Index, Roll) -> Either BowlingError [Roll]
-is3 r1 r2 (idx,r3)
-  | r1 == 10 && r2 == 10 && r3 == 10 = pure [r1,r2,r3]
-  | r1 == 10 && r2 == 10             = (:[r1,r2]) <$> is1 (idx, r3)
-  | r1 == 10                         = (r1:) <$> is2 r2 (idx,r3)
-  | r1 == 0 && r2 == 0               = Left $ InvalidRoll idx r3
-  | otherwise = pure [r1,r2,r3]
-
-
-
-
--- TODO: where?
+-- TODO: where? validateRoll2を使って書けない？
 mkFrame2 :: Roll -> (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame2 r1 (idx,r2)
   | r1 + r2 == 10 = pure $ Done $ SpareC r1
@@ -191,96 +160,58 @@ getNext2 (f:fs) = get f
     get (Last (Thr (n1,n2,_)))  = n1 + n2
 
 
--- utils
+
+--
+-- Validations
+--
+
+isValidRoll1 :: Roll -> Bool
+isValidRoll1 r1 = 0 <= r1 && r1 <= 10
+
+
+isValidRoll2 :: Roll -> Roll -> Bool
+isValidRoll2 r1 r2 = r1 + r2 <= 10
+
+
+validateRoll1 :: (Index, Roll) -> Either BowlingError Roll
+validateRoll1 (idx,r1)
+  | isValidRoll1 r1 = pure r1
+  | otherwise       = Left $ InvalidRoll idx r1
+
+
+validateRoll2 :: Roll -> (Index, Roll) -> Either BowlingError [Roll]
+validateRoll2 r1 (idx,r2)
+  | isValidRoll2 r1 r2 = (\r -> [r1,r]) <$> validateRoll1 (idx,r2)
+  | otherwise          = Left $ InvalidRoll idx r2
+
+
+validateRoll3 :: Roll -> Roll -> (Index, Roll) -> Either BowlingError [Roll]
+validateRoll3 r1 r2 (idx,r3)
+  | (r1,r2) == (10,10) = (\r -> [r1,r2,r]) <$> validateRoll1 (idx, r3)  -- strike*2&open, strike*3
+  | r1 == 10           = (r1:) <$> validateRoll2 r2 (idx,r3)            -- strike&open, strike&spare
+  | r1 + r2 == 10      = (\r -> [r1,r2,r]) <$> validateRoll1 (idx, r3)  -- spare&open, spare&strike
+  | otherwise          = Left $ InvalidRoll idx r3
+
+
+validateFrameCount :: [Frame] -> Either BowlingError [Frame]
+validateFrameCount fs
+  | length fs >= 10 = pure fs
+  | otherwise       = Left IncompleteGame
+
+
+
+
+--
+-- Utilities
+--
+
 indexedFoldM :: Monad m => (a -> (Int, b) -> m a) -> a -> [b] -> m a
 indexedFoldM f acc xs = foldM f acc (zip [0..] xs)
 
 
 
--- validates :: [Roll] -> Either BowlingError [Roll]
--- validates rs = step rs 0
---   where
---     step :: [Roll] -> Int -> Either BowlingError [Roll]
---     step [] _ = Right []
---     step (r:rs) idx
---       | r < 0 || r > 10 = Left $ InvalidRoll idx r
---       | otherwise       = (:) r <$> step rs (idx + 1)
---     -- step (rs, 10) = Right [Last rs]
---     -- step (r1:r2:r3:rs, idx)
---     --   | r1 == 10      = (:) (Normal $ Strike (r2, r3)) <$> step (r2:r3:rs, idx + 1)
---     --   | r1 + r2 == 10 = (:) (Normal $ Spare r3) <$> step (r3:rs, idx + 1)
---     --   | r1 + r2 < 10  = (:) (Normal $ Open (r1, r2)) <$> step (r3:rs, idx + 1)
---     --   | otherwise     = Left IncompleteGame -- TODO:
 
 
--- TODO: eitherやめたい？
--- makeFramePs :: [Roll] -> Either BowlingError [FrameP]
--- makeFramePs rolls = step (rolls, 1)
---   where
---     step ([], _)  = Left IncompleteGame
---     step (rs, 10) = Right [Last rs]
---     step (r1:r2:r3:rs, idx)
---       | r1 == 10      = (:) (Normal $ Strike (r2, r3)) <$> step (r2:r3:rs, idx + 1)
---       | r1 + r2 == 10 = (:) (Normal $ Spare r3) <$> step (r3:rs, idx + 1)
---       | r1 + r2 < 10  = (:) (Normal $ Open (r1, r2)) <$> step (r3:rs, idx + 1)
---       | otherwise     = Left IncompleteGame -- TODO:
-
-
--- type FrameAcc = Int
-
--- makeFramePs :: [Roll] -> Either BowlingError [FrameP]
--- makeFramePs rs = undefined
---   where
---     f [] = roll
-
-
--- data FoldFrame
---   = Done Frame
---   | Pend Roll
-
-
--- roll :: Roll -> Index -> FoldFrame -> Either BowlingError FoldFrame
--- -- roll r 19
--- -- roll r 20
--- -- roll r 21
--- roll r i (Done _)
---   | r == 10  = Done $ Normal $ Strike
--- -- roll r i (Done _)  = if validate r then Right $ Pend r else Left $ InvalidRoll i r
--- roll r i (Pend p) = undefined
-
-
--- validate :: Roll -> Bool
--- validate r = 0 <= r && r <= 10
-
-
-
-
-
--- scorePerFrame :: FrameP -> Int
--- scorePerFrame (Normal (Open (r1, r2)))   = r1 + r2
--- scorePerFrame (Normal (Spare n))         = 10 + n
--- scorePerFrame (Normal (Strike (n1, n2))) = 10 + n1 + n2
--- scorePerFrame (Last rs)                  = sum rs
-
-
-
--- 必要条件
--- ボーリングのゲームのスコアを記録するコードを書きなさい。つの操作をサポートすること：
-
--- roll(pins : int) はプレイヤーがボールを転がすたびに呼ばれる。引数は倒したピンの数。
--- score() : int はゲーム終了時にのみ呼ばれる。これはそのゲームの合計得点を返す。
--- この演習を完了するには、ボウリングの一連の転がりを受け取り、最終的なスコアまたは適切なエラーを返す関数scoreを実装する必要があります：
-
--- これらの定義はすでに用意されていますが、関数を定義するのはあなた次第です。
-
--- テスト・スイートは、ロールに0から始まる番号が振られることを期待していることに留意してください。
-
-
-
--- リストモナドを使うときれいに書ける説？
-
--- 適切なデータ構造を見つけるのが難しい
--- 仕様に正確に、型を組んでいくしか無い？
 
 
 -- cases = [ Case { description = "should be able to score a game with all zeros"
@@ -403,19 +334,3 @@ indexedFoldM f acc xs = foldM f acc (zip [0..] xs)
 --                , rolls       = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 3, 2, 2]
 --                , expected    = Left $ InvalidRoll 21 2
 --                }
-
-
-
--- last
--- - 1 1
---   open
--- - 1 9 1
---   spare+open
--- - 1 9 10
---   spare + strke
--- - 10 1 1
---   - strike+open
--- - 10 9 1
---   - strike+spare
--- - 10 10 10
---   strike*3
