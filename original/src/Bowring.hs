@@ -29,67 +29,133 @@ data LastFrame
 -- TODO: まあ、[Roll]だけでも良さげ..
 
 
--- >>> score [3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 5]
--- /Users/mrsekut/Desktop/dev/github.com/mrsekut/kakisute-hs/original/src/Bowring.hs:(93,1)-(95,67): Non-exhaustive patterns in function score'
 
-score :: [Roll] -> Either BowlingError Int
+-- >>> score [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
+-- Left IncompleteGame
+score rolls = do
+    let a = indexedFoldM roll [] rolls
+    b <- reverse <$> a
+    c <- mapM unwrapPendingFrame b
+    d <- validateFrameCount c
+    pure $ score' d
+-- score :: [Roll] -> Either BowlingError Int
 -- TODO: clean
-score rolls = d
-  where
-    a = indexedFoldM roll [] rolls
-    b = reverse <$> a
-    c = map unwrapPendingFrame <$> b
-    d = score' <$> c
 
+
+validateFrameCount :: [Frame] -> Either BowlingError [Frame]
+validateFrameCount fs = if length fs >= 10
+  then pure fs
+  else Left IncompleteGame
 
 -- TODO: やっぱこれが微妙なんだよなあ..
 -- TODO: 書き換え案1: Stateモナド
 data PendingFrame
-  = Done Frame -- TODO: ここのFrame参照されてない？
-  | Pend [Roll]
+  = Done CommonFrame -- TODO: ここのFrame参照されてない？
+  | Pend [Roll] -- TODO: ここも厳密でない。Normalだと0/1要素で、ラストだけ1/2
+  deriving (Show)
+
+data CommonFrame
+  = OpenC (Roll, Roll)
+  | SpareC Roll
+  | StrikeC
+  | LastC [Roll] -- 2 or 3 elements
   deriving (Show)
 
 type Index = Int
 
 -- NOTE: 先頭に追加して、最後にreverseする
+-- NOTE: 最後までCommonでいっちゃう
+-- TODO: clean: 分岐が多すぎ
 roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
 roll [] cur  = (:[]) <$> mkFrame1 cur
-roll ps@(last:tail) cur
-  | length ps == 9 && isDone last = undefined -- 10frameの初回。pendに追加するだけ
-  | length ps == 10 = undefined -- 10frameの2 or 3回目
+roll ps@(last:tail) (idx,roll)
+  | length ps == 9 && isDone last = do
+      -- 10 frame目の1投目
+      r <- is1 (idx,roll)
+      pure $ Pend [r] : ps
+  | length ps == 10 = case last of
+      Done _ -> Left $ InvalidRoll idx roll -- lastが0 0 0
+      Pend [p]   -> if p + roll < 10
+        then do
+          -- 10frameの2投目 2投で終了
+          r <- is1 (idx,roll)
+          pure $ Done (LastC [p,r]) : tail
+        else do
+          -- 10frameの2投目 3投目がある
+          r <- is1 (idx,roll)
+          pure $ Pend [p,r] : tail
+      Pend [p,q] -> do
+          -- 10frame目 3投で終了
+          r <- is1 (idx,roll)
+          rs <- is3 p q (idx,roll)
+          pure $ Done (LastC rs) : tail
+
+    --  Pend [p,q] -> pure $ Done (LastC [p,q,roll]) : tail
   | otherwise = do
     -- TODO: clean
-    a <- case last of
-      Done _            -> mkFrame1 cur
-      Pend (prevRoll:_) -> mkFrame2 prevRoll cur
+    case last of
+      Done _     -> (:ps) <$> mkFrame1 (idx,roll)
+      Pend (p:_) -> (:tail) <$> mkFrame2 p (idx,roll)
 
-    return $ case a of
-      Done _ -> a:tail
-      Pend _ -> a:ps
+  where
+    isDone (Done _) = True
+    isDone _        = False
+
+
+-- TODO: where?
+is1 :: (Index, Roll) -> Either BowlingError Roll
+is1 (idx,r1)
+  | 0 <= r1 && r1 <= 10 = pure r1
+  | otherwise          = Left $ InvalidRoll idx r1
 
 
 
--- TODO: 知りすぎ？ それならwhere無いでもいいかも？
+
+-- TODO: where?, is1に置き換え
 mkFrame1 :: (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame1 (idx,r1)
-  | r1 == 10           = pure $ Done $ Normal Strike
+  | r1 == 10           = pure $ Done StrikeC
   | 0 <= r1 && r1 < 10 = pure $ Pend [r1]
   | otherwise          = Left $ InvalidRoll idx r1
 
 
--- TODO: 知りすぎ？
+
+is2 :: Roll -> (Index, Roll) -> Either BowlingError [Roll]
+is2 r1 (idx,r2)
+  | r1 + r2 <= 10  = pure [r1, r2]
+  | otherwise     = Left $ InvalidRoll idx r2
+
+
+-- TODO: 前提があって変
+is3 :: Roll -> Roll -> (Index, Roll) -> Either BowlingError [Roll]
+is3 r1 r2 (idx,r3)
+  | r1 == 10 && r2 == 10 && r3 == 10 = pure [r1,r2,r3]
+  | r1 == 10 && r2 == 10             = (:[r1,r2]) <$> is1 (idx, r3)
+  | r1 == 10                         = (r1:) <$> is2 r2 (idx,r3)
+  | r1 == 0 && r2 == 0               = Left $ InvalidRoll idx r3
+  | otherwise = pure [r1,r2,r3]
+
+
+
+
+-- TODO: where?
 mkFrame2 :: Roll -> (Index, Roll) -> Either BowlingError PendingFrame
 mkFrame2 r1 (idx,r2)
-  | r1 + r2 == 10 = pure $ Done $ Normal $ Spare r1
-  | r1 + r2 < 10  = pure $ Done $ Normal $ Open (r1, r2)
+  | r1 + r2 == 10 = pure $ Done $ SpareC r1
+  | r1 + r2 < 10  = pure $ Done $ OpenC (r1, r2)
   | otherwise     = Left $ InvalidRoll idx r2
 
 
 
 
-unwrapPendingFrame :: PendingFrame -> Frame
-unwrapPendingFrame (Done frame) = frame
-unwrapPendingFrame (Pend _)     = error ""
+-- TODO: Common to Frame (Doneを剥がしたり、Lastを作ったり)
+unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
+unwrapPendingFrame (Done (OpenC (r1,r2)))    = pure $ Normal $ Open (r1,r2)
+unwrapPendingFrame (Done (SpareC r))         = pure $ Normal $ Spare r
+unwrapPendingFrame (Done StrikeC)            = pure $ Normal Strike
+unwrapPendingFrame (Done (LastC [r1,r2]))    = pure $ Last $ Two (r1,r2)
+unwrapPendingFrame (Done (LastC [r1,r2,r3])) = pure $ Last $ Thr (r1,r2,r3)
+unwrapPendingFrame (Pend _)                  = Left IncompleteGame
 
 
 -- TODO: name
@@ -98,17 +164,20 @@ score' []                            = 0
 score' ((Normal (Open (r1, r2))):fs) = r1 + r2 + score' fs
 score' ((Normal (Spare r)):fs)       = 10 + getNext1 fs + score' fs
 score' ((Normal Strike):fs)          = 10 + getNext2 fs + score' fs
--- TODO: last
+score' (Last (Two (r1,r2)):fs)       = r1 + r2 + score' fs
+score' ((Last (Thr (r1,r2,r3))):fs)  = r1 + r2 + r3 + score' fs
 
 
 getNext1 :: [Frame] -> Int
+getNext1 [] = 0
 getNext1 (f:_) = get f
   where
     get :: Frame -> Int
     get (Normal (Open (n1,_))) = n1
     get (Normal (Spare n1))    = n1
     get (Normal Strike)        = 10
-    -- TODO: last
+    get (Last (Two (n1,_)))    = n1
+    get (Last (Thr (n1,_,_)))  = n1
 
 
 getNext2 :: [Frame] -> Int
@@ -118,7 +187,8 @@ getNext2 (f:fs) = get f
     get (Normal (Open (n1,n2))) = n1 + n2
     get (Normal (Spare n1))     = 10
     get (Normal Strike)         = 10 + getNext1 fs
-    -- TODO: last
+    get (Last (Two (n1,n2)))    = n1 + n2
+    get (Last (Thr (n1,n2,_)))  = n1 + n2
 
 
 -- utils
@@ -335,3 +405,17 @@ indexedFoldM f acc xs = foldM f acc (zip [0..] xs)
 --                }
 
 
+
+-- last
+-- - 1 1
+--   open
+-- - 1 9 1
+--   spare+open
+-- - 1 9 10
+--   spare + strke
+-- - 10 1 1
+--   - strike+open
+-- - 10 9 1
+--   - strike+spare
+-- - 10 10 10
+--   strike*3
