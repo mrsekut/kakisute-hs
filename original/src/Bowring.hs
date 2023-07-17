@@ -32,28 +32,9 @@ data LastFrame
 
 
 
--- TODO: clean
-score :: [Roll] -> Either BowlingError Int
-score rolls = do
-  let a = indexedFoldM roll [] rolls
-  b <- reverse <$> a
-  c <- mapM unwrapPendingFrame b
-  d <- validateFrameCount c
-  pure $ framesScore d
-
-  where
-    unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
-    unwrapPendingFrame (Done a) = pure a
-    unwrapPendingFrame (Pend _) = Left IncompleteGame
 
 
 
--- TODO: やっぱこれが微妙なんだよなあ..
--- TODO: 書き換え案1: Stateモナド
-data PendingFrame
-  = Done Frame
-  | Pend [ValidRoll] -- TODO: ここも厳密でない。Normalだと0/1要素で、ラストだけ1/2
-  deriving (Show)
 
 type Index = Int
 
@@ -61,7 +42,7 @@ type Index = Int
 -- NOTE: 最後までCommonでいっちゃう
 -- TODO: clean: 分岐が多すぎ
 roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
-roll [] cur  = (:[]) . mkFrame1 <$> mkValidRoll1 cur
+roll [] cur  = (:[]) . mkPendinFrame1 <$> mkValidRoll1 cur
 roll ps@(prev:rest) (idx,roll)
   | length ps == 9 && isDone prev = rollForLast -- 10 frame目の1投目
   | length ps == 10               = rollForLast' prev
@@ -73,10 +54,10 @@ roll ps@(prev:rest) (idx,roll)
 
     -- TODO: clean
     rollForNormal :: PendingFrame -> Either BowlingError [PendingFrame]
-    rollForNormal (Done _)     = (:ps) . mkFrame1 <$> mkValidRoll1 (idx,roll)
+    rollForNormal (Done _)     = (:ps) . mkPendinFrame1 <$> mkValidRoll1 (idx,roll)
     rollForNormal (Pend (p:_)) = do
       (r1,r2) <- mkValidRoll2 p (idx,roll)
-      pure $ (:rest) (mkFrame2 r1 r2)
+      pure $ (:rest) (mkPendinFrame2 r1 r2)
 
 
 -- TODO: type
@@ -101,28 +82,6 @@ roll ps@(prev:rest) (idx,roll)
 
 
 
-
-
-
-
--- TODO: Done/Pend知ってるのがなあ.. あとは、Lastの時のロジックも結果的に含む?(分けるかもしれんが)
--- TODO: こんなunwrapしまくっていいの？
-mkFrame1 :: ValidRoll -> PendingFrame
-mkFrame1 r1
-  | unValidRoll r1 == 10           = Done (Normal Strike)
-  | 0 <= unValidRoll r1 && unValidRoll r1 < 10 = Pend [r1]
-
-
--- TODO: Done/Pend知ってるのがなあ.. あとは、Lastの時のロジックも結果的に含む?(分けるかもしれんが)
--- TODO: こんなunwrapしまくっていいの？
-mkFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
-mkFrame2 r1 r2
-  | unValidRoll (r1 + r2) == 10 = Done $ Normal $ Spare r1
-  | unValidRoll (r1 + r2) < 10  = Done $ Normal $ Open (r1, r2)
-
-
-
-
 --
 --
 --
@@ -135,6 +94,19 @@ mkFrame2 r1 r2
 --
 --
 
+score :: [Roll] -> Either BowlingError Int
+score rolls = do
+  pendingFrames <- reverse <$> indexedFoldM roll [] rolls
+  frames <- pendingFrames2frames pendingFrames
+  pure $ framesScore frames
+
+
+pendingFrames2frames :: [PendingFrame] -> Either BowlingError [Frame]
+pendingFrames2frames ps = mapM unwrapPendingFrame ps >>= validateFrameCount
+  where
+    unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
+    unwrapPendingFrame (Done a) = pure a
+    unwrapPendingFrame (Pend _) = Left IncompleteGame
 
 
 framesScore :: [Frame] -> Int
@@ -171,6 +143,33 @@ getNext2 (x:xs) = get x
     get (Normal Strike)         = 10 + getNext1 xs
     get (Last (Two (n1,n2)))    = unValidRoll $ n1 + n2
     get (Last (Thr (n1,n2,_)))  = unValidRoll $ n1 + n2
+
+
+
+--
+-- Pending Frame
+--
+
+-- TODO: やっぱこれが微妙なんだよなあ..
+-- TODO: 書き換え案1: Stateモナド
+data PendingFrame
+  = Done Frame
+  | Pend [ValidRoll] -- TODO: ここも厳密でない。Normalだと0/1要素で、ラストだけ1/2
+  deriving (Show)
+
+
+-- TODO: Done/Pend知ってるのがなあ..
+mkPendinFrame1 :: ValidRoll -> PendingFrame
+mkPendinFrame1 r1
+  | unValidRoll r1 == 10 = Done (Normal Strike)
+  | otherwise            = Pend [r1]
+
+
+-- TODO: Done/Pend知ってるのがなあ..
+mkPendinFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
+mkPendinFrame2 r1 r2
+  | unValidRoll (r1 + r2) == 10 = Done $ Normal $ Spare r1
+  | otherwise                   = Done $ Normal $ Open (r1, r2)
 
 
 
