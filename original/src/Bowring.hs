@@ -1,4 +1,6 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections              #-}
+
 module Bowling (score, BowlingError(..)) where
 import           Control.Applicative (Applicative (..))
 import           Control.Monad
@@ -115,8 +117,8 @@ mkFrame1 r1
 -- TODO: こんなunwrapしまくっていいの？
 mkFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
 mkFrame2 r1 r2
-  | unValidRoll r1 + unValidRoll r2 == 10 = Done $ Normal $ Spare r1
-  | unValidRoll r1 + unValidRoll r2 < 10  = Done $ Normal $ Open (r1, r2)
+  | unValidRoll (r1 + r2) == 10 = Done $ Normal $ Spare r1
+  | unValidRoll (r1 + r2) < 10  = Done $ Normal $ Open (r1, r2)
 
 
 
@@ -140,11 +142,11 @@ framesScore []     = 0
 framesScore (x:xs) = frameScore (x:xs) + framesScore xs
   where
     frameScore :: [Frame] -> Int
-    frameScore ((Normal (Open (r1, r2))):_) = unValidRoll r1 + unValidRoll r2
+    frameScore ((Normal (Open (r1, r2))):_) = unValidRoll $ r1 + r2
     frameScore ((Normal (Spare _)):xs)      = 10 + getNext1 xs
     frameScore ((Normal Strike):xs)         = 10 + getNext2 xs
-    frameScore (Last (Two (r1,r2)):_)       = unValidRoll r1 + unValidRoll r2
-    frameScore ((Last (Thr (r1,r2,r3))):_)  = unValidRoll r1 + unValidRoll r2 + unValidRoll r3
+    frameScore (Last (Two (r1,r2)):_)       = unValidRoll $ r1 + r2
+    frameScore ((Last (Thr (r1,r2,r3))):_)  = unValidRoll $ r1 + r2 + r3
 
 
 getNext1 :: [Frame] -> Int
@@ -164,11 +166,11 @@ getNext2 []     = 0
 getNext2 (x:xs) = get x
   where
     get :: Frame -> Int
-    get (Normal (Open (n1,n2))) = unValidRoll n1 + unValidRoll n2
+    get (Normal (Open (n1,n2))) = unValidRoll $ n1 + n2
     get (Normal (Spare _))      = 10
     get (Normal Strike)         = 10 + getNext1 xs
-    get (Last (Two (n1,n2)))    = unValidRoll n1 + unValidRoll n2
-    get (Last (Thr (n1,n2,_)))  = unValidRoll n1 + unValidRoll n2
+    get (Last (Two (n1,n2)))    = unValidRoll $ n1 + n2
+    get (Last (Thr (n1,n2,_)))  = unValidRoll $ n1 + n2
 
 
 
@@ -177,7 +179,7 @@ getNext2 (x:xs) = get x
 --
 
 -- 0~10
-newtype ValidRoll = ValidRoll_ Int deriving (Show, Eq)
+newtype ValidRoll = ValidRoll_ Int deriving (Show, Eq, Num)
 
 
 mkValidRoll1 :: (Index, Roll) -> Either BowlingError ValidRoll
