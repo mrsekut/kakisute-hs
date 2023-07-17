@@ -30,30 +30,27 @@ data LastFrame
 
 
 
--- >>> score [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 3, 7]
--- Right 17
+-- TODO: clean
 score :: [Roll] -> Either BowlingError Int
 score rolls = do
-    let a = indexedFoldM roll [] rolls
-    b <- reverse <$> a
-    c <- mapM unwrapPendingFrame b
-    d <- validateFrameCount c
-    pure $ framesScore d
--- TODO: clean
+  let a = indexedFoldM roll [] rolls
+  b <- reverse <$> a
+  c <- mapM unwrapPendingFrame b
+  d <- validateFrameCount c
+  pure $ framesScore d
+
+  where
+    unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
+    unwrapPendingFrame (Done a) = pure a
+    unwrapPendingFrame (Pend _) = Left IncompleteGame
+
 
 
 -- TODO: やっぱこれが微妙なんだよなあ..
 -- TODO: 書き換え案1: Stateモナド
 data PendingFrame
-  = Done CommonFrame
+  = Done Frame
   | Pend [ValidRoll] -- TODO: ここも厳密でない。Normalだと0/1要素で、ラストだけ1/2
-  deriving (Show)
-
-data CommonFrame
-  = OpenC (ValidRoll, ValidRoll)
-  | SpareC ValidRoll
-  | StrikeC
-  | LastC [ValidRoll] -- 2 or 3 elements
   deriving (Show)
 
 type Index = Int
@@ -63,40 +60,46 @@ type Index = Int
 -- TODO: clean: 分岐が多すぎ
 roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
 roll [] cur  = (:[]) . mkFrame1 <$> mkValidRoll1 cur
-roll ps@(last:tail) (idx,roll)
-  | length ps == 9 && isDone last = do
-      -- 10 frame目の1投目
-      r <- mkValidRoll1 (idx,roll)
-      pure $ Pend [r] : ps
-
-  | length ps == 10 = case last of
-      Done _ -> Left $ InvalidRoll idx roll -- lastが0 0 0
-      Pend [p]   -> if unValidRoll p + roll < 10 -- TODO: unwrapしていいの？
-        then do
-          -- 10frameの2投目 2投で終了
-          r <- mkValidRoll1 (idx,roll)
-          pure $ Done (LastC [p,r]) : tail
-        else do
-          -- 10frameの2投目 3投目がある
-          r <- mkValidRoll1 (idx,roll)
-          pure $ Pend [p,r] : tail
-      Pend [p,q] -> do
-          -- 10frame目 3投で終了
-          -- r <- mkValidRoll1 (idx,roll)
-          (r1,r2,r3) <- mkValidRoll3 p q (idx,roll)
-          pure $ Done (LastC [r1,r2,r3]) : tail
-
-  | otherwise = do
-    -- TODO: clean
-    case last of
-      Done _     -> (:ps) . mkFrame1 <$> mkValidRoll1 (idx,roll)
-      Pend (p:_) -> do
-        (r1,r2) <- mkValidRoll2 p (idx,roll)
-        pure $ (:tail) (mkFrame2 r1 r2)
+roll ps@(prev:rest) (idx,roll)
+  | length ps == 9 && isDone prev = rollForLast -- 10 frame目の1投目
+  | length ps == 10               = rollForLast' prev
+  | otherwise                     = rollForNormal prev
 
   where
     isDone (Done _) = True
     isDone _        = False
+
+    -- TODO: clean
+    rollForNormal :: PendingFrame -> Either BowlingError [PendingFrame]
+    rollForNormal (Done _)     = (:ps) . mkFrame1 <$> mkValidRoll1 (idx,roll)
+    rollForNormal (Pend (p:_)) = do
+      (r1,r2) <- mkValidRoll2 p (idx,roll)
+      pure $ (:rest) (mkFrame2 r1 r2)
+
+
+-- TODO: type
+    rollForLast = (\a -> Pend [a] : ps) <$> mkValidRoll1 (idx,roll)
+
+-- TODO: type
+    rollForLast' (Done _) = Left $ InvalidRoll idx roll -- prevが0 0 0
+    rollForLast' (Pend [p]) = if unValidRoll p + roll < 10 -- TODO: unwrapしていいの？
+        then do
+          -- 10frameの2投目 2投で終了
+          r <- mkValidRoll1 (idx,roll)
+          pure $ Done (Last $ Two ( p,r )) : rest
+        else do
+          -- 10frameの2投目 3投目がある
+          r <- mkValidRoll1 (idx,roll)
+          pure $ Pend [p,r] : rest
+    rollForLast' (Pend [p,q]) = do
+          -- 10frame目 3投で終了
+          (r1,r2,r3) <- mkValidRoll3 p q (idx,roll)
+          pure $ Done (Last $ Thr ( r1,r2,r3 )) : rest
+
+
+
+
+
 
 
 
@@ -104,7 +107,7 @@ roll ps@(last:tail) (idx,roll)
 -- TODO: こんなunwrapしまくっていいの？
 mkFrame1 :: ValidRoll -> PendingFrame
 mkFrame1 r1
-  | unValidRoll r1 == 10           = Done StrikeC
+  | unValidRoll r1 == 10           = Done (Normal Strike)
   | 0 <= unValidRoll r1 && unValidRoll r1 < 10 = Pend [r1]
 
 
@@ -112,20 +115,11 @@ mkFrame1 r1
 -- TODO: こんなunwrapしまくっていいの？
 mkFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
 mkFrame2 r1 r2
-  | unValidRoll r1 + unValidRoll r2 == 10 = Done $ SpareC r1
-  | unValidRoll r1 + unValidRoll r2 < 10  = Done $ OpenC (r1, r2)
+  | unValidRoll r1 + unValidRoll r2 == 10 = Done $ Normal $ Spare r1
+  | unValidRoll r1 + unValidRoll r2 < 10  = Done $ Normal $ Open (r1, r2)
 
 
 
-
--- TODO: Common to Frame (Doneを剥がしたり、Lastを作ったり)
-unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
-unwrapPendingFrame (Done (OpenC (r1,r2)))    = pure $ Normal $ Open (r1,r2)
-unwrapPendingFrame (Done (SpareC r))         = pure $ Normal $ Spare r
-unwrapPendingFrame (Done StrikeC)            = pure $ Normal Strike
-unwrapPendingFrame (Done (LastC [r1,r2]))    = pure $ Last $ Two (r1,r2)
-unwrapPendingFrame (Done (LastC [r1,r2,r3])) = pure $ Last $ Thr (r1,r2,r3)
-unwrapPendingFrame (Pend _)                  = Left IncompleteGame
 
 --
 --
