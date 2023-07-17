@@ -33,29 +33,14 @@ data LastFrame
 
 
 
--- >>> score [3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6]
--- Right ([Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6)),Normal (Open (ValidRoll_ 3,ValidRoll_ 6))],Done)
+-- >>> score [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+-- Left (InvalidRoll {rollIndex = 20, rollValue = 0})
+score :: [Roll] -> Either BowlingError Int
 score rolls = do
-  pendingFrames <- runStateT (indexedFoldM roll [] rolls) Done
-  -- pendingFrames <- runStateT (reverse <$> indexedFoldM roll [] rolls) Done
-  pure pendingFrames
-  -- undefined
-  -- pure pendingFrames
-
-  -- frames <- pendingFrames2frames pendingFrames
-  -- pure $ framesScore frames
--- score :: [Roll] -> Either BowlingError Int
--- score rolls = undefined
-
-
-
-pendingFrames2frames :: [PendingFrame] -> Either BowlingError [Frame]
-pendingFrames2frames ps = mapM unwrapPendingFrame ps >>= validateFrameCount
-  where
-    unwrapPendingFrame :: PendingFrame -> Either BowlingError Frame
-    unwrapPendingFrame = undefined
-    -- unwrapPendingFrame (Done a) = pure a
-    -- unwrapPendingFrame (Pend _) = Left IncompleteGame
+  (frames,_) <- runStateT (indexedFoldM roll [] rolls) Done
+  let a = reverse frames
+  b <- validateFrameCount a
+  pure $ framesScore b
 
 
 framesScore :: [Frame] -> Int
@@ -111,64 +96,50 @@ data PendingFrame
 
 
 -- 先頭に追加して、最後にreverseする
--- TODO: 分岐
 roll :: [Frame] -> (Index,Roll) -> WithPendingFrame [Frame]
-roll ps cur
-  -- | length ps == 9 && isDone prev = rollFor10First cur -- 10 frame目の1投目
-  -- | length ps == 10               = rollFor10 prev cur
-  | False = undefined
-  | otherwise                     = do
+roll fs cur
+  | length fs <= 8  = do
       p <- get
-      rollForNormal p cur
+      rollForNormal p
+  | length fs == 9 = do
+      p <- get
+      rollFor10 p cur
+  | otherwise = lift $ Left (uncurry InvalidRoll cur)
 
   where
-    -- isDone Done = True
-    -- isDone _    = False
-
-    rollForNormal :: PendingFrame -> (Index, Roll) -> WithPendingFrame [Frame]
-    rollForNormal Done cur = do
+    rollForNormal :: PendingFrame -> WithPendingFrame [Frame]
+    rollForNormal Done = do
       r1 <- lift $ mkValidRoll1 cur
       frame <- putPendingFrame1 r1
-      pure $ maybe ps (:ps) frame
-    rollForNormal (Pend [p]) cur = do
+      pure $ maybe fs (:fs) frame
+    rollForNormal (Pend [p]) = do
       (r1, r2) <- lift $ mkValidRoll2 p cur
       frame <- mkPendingFrame2 r1 r2
-      pure $ frame : ps
-
-    -- rollForNormal :: PendingFrame -> (Index, Roll) -> Either BowlingError [PendingFrame]
-    -- rollForNormal = undefined
-    -- rollForNormal Done cur     = do
-    --   r1 <- mkValidRoll1 cur
-    --   pure $ mkPendingFrame1 r1 : ps
-    -- rollForNormal (Pend (p:_)) cur = do
-    --   (r1,r2) <- mkValidRoll2 p cur
-    --   pure $ mkPendingFrame2 r1 r2 : rest
+      pure $ frame : fs
 
 
-    -- TODO: mkPendingFrame
-    rollFor10First :: (Index, Roll) -> Either BowlingError [PendingFrame]
-    rollFor10First = undefined
-    -- rollFor10First cur = do
-    --   r1 <- mkValidRoll1 cur
-    --   pure $ Pend [r1] : ps
-
-    -- TODO: mkPendingFrame
-    rollFor10 :: PendingFrame -> (Index, Roll) -> Either BowlingError [PendingFrame]
-    rollFor10 = undefined
-    -- rollFor10 Done (idx,roll)  = Left $ InvalidRoll idx roll -- prevが0 0 0
-    -- rollFor10 (Pend [r1]) (idx,roll)
-    --   | unValidRoll r1 + roll < 10 = do
-    --       -- 10frameの2投目 2投で終了
-    --       r2 <- mkValidRoll1 (idx,roll)
-    --       pure $ Done (Last $ Two (r1,r2)) : rest
-    --   | otherwise = do
-    --       -- 10frameの2投目 3投目がある
-    --       r2 <- mkValidRoll1 (idx,roll)
-    --       pure $ Pend [r1,r2] : rest
-    -- rollFor10 (Pend [p,q]) cur = do
-    --   -- 10frame目 3投で終了
-    --   (r1,r2,r3) <- mkValidRoll3 p q cur
-    --   pure $ Done (Last $ Thr (r1,r2,r3)) : rest
+    -- TODO: mkPendingFrame, 関数分割
+    rollFor10 :: PendingFrame -> (Index, Roll) -> WithPendingFrame [Frame]
+    -- rollFor10 Done (idx,roll) = lift . Left $ InvalidRoll idx roll -- prevが0 0 0
+    rollFor10 Done cur = do
+      r1 <- lift $ mkValidRoll1 cur
+      put $ Pend [r1]
+      pure fs
+    rollFor10 (Pend [r1]) (idx,roll)
+      | unValidRoll r1 + roll < 10 = do
+          -- 10frameの2投目 2投で終了
+          r2 <- lift $ mkValidRoll1 (idx,roll)
+          put Done
+          pure $ Last (Two (r1,r2)) : fs
+      | otherwise = do
+          -- 10frameの2投目 3投目がある
+          r2 <- lift $ mkValidRoll1 (idx,roll)
+          put $ Pend [r1,r2]
+          pure fs
+    rollFor10 (Pend [p1,p2]) cur = do
+      (r1,r2,r3) <- lift $ mkValidRoll3 p1 p2 cur
+      put Done
+      pure $ Last (Thr (r1,r2,r3)) : fs
 
 
 putPendingFrame1 :: ValidRoll -> WithPendingFrame (Maybe Frame)
