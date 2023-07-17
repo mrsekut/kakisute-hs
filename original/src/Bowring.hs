@@ -12,8 +12,6 @@ data BowlingError = IncompleteGame
   deriving (Eq, Show)
 
 
-type Roll = Int
-
 data Frame
   = Normal NormalFrame
   | Last LastFrame
@@ -31,68 +29,6 @@ data LastFrame
   deriving (Show)
 
 
-
-
-
-
-
-type Index = Int
-
--- NOTE: 先頭に追加して、最後にreverseする
--- NOTE: 最後までCommonでいっちゃう
--- TODO: clean: 分岐が多すぎ
-roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
-roll [] cur  = (:[]) . mkPendingFrame1 <$> mkValidRoll1 cur
-roll ps@(prev:rest) (idx,roll)
-  | length ps == 9 && isDone prev = rollForLast -- 10 frame目の1投目
-  | length ps == 10               = rollForLast' prev
-  | otherwise                     = rollForNormal prev
-
-  where
-    isDone (Done _) = True
-    isDone _        = False
-
-    -- TODO: clean
-    rollForNormal :: PendingFrame -> Either BowlingError [PendingFrame]
-    rollForNormal (Done _)     = (:ps) . mkPendingFrame1 <$> mkValidRoll1 (idx,roll)
-    rollForNormal (Pend (p:_)) = do
-      (r1,r2) <- mkValidRoll2 p (idx,roll)
-      pure $ (:rest) (mkPendingFrame2 r1 r2)
-
-
--- TODO: type
-    rollForLast = (\a -> Pend [a] : ps) <$> mkValidRoll1 (idx,roll)
-
--- TODO: type
-    rollForLast' (Done _) = Left $ InvalidRoll idx roll -- prevが0 0 0
-    rollForLast' (Pend [p]) = if unValidRoll p + roll < 10 -- TODO: unwrapしていいの？
-        then do
-          -- 10frameの2投目 2投で終了
-          r <- mkValidRoll1 (idx,roll)
-          pure $ Done (Last $ Two ( p,r )) : rest
-        else do
-          -- 10frameの2投目 3投目がある
-          r <- mkValidRoll1 (idx,roll)
-          pure $ Pend [p,r] : rest
-    rollForLast' (Pend [p,q]) = do
-          -- 10frame目 3投で終了
-          (r1,r2,r3) <- mkValidRoll3 p q (idx,roll)
-          pure $ Done (Last $ Thr ( r1,r2,r3 )) : rest
-
-
-
-
---
---
---
---
---
---
---
---
---
---
---
 
 score :: [Roll] -> Either BowlingError Int
 score rolls = do
@@ -143,6 +79,62 @@ getNext2 (x:xs) = get x
     get (Normal Strike)         = 10 + getNext1 xs
     get (Last (Two (n1,n2)))    = unValidRoll $ n1 + n2
     get (Last (Thr (n1,n2,_)))  = unValidRoll $ n1 + n2
+
+
+
+--
+-- Roll
+--
+
+type Roll = Int
+type Index = Int
+
+
+
+-- 先頭に追加して、最後にreverseする
+-- TODO: 分岐
+roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
+roll [] cur  = (:[]) . mkPendingFrame1 <$> mkValidRoll1 cur
+roll ps@(prev:rest) cur
+  | length ps == 9 && isDone prev = rollFor10First cur -- 10 frame目の1投目
+  | length ps == 10               = rollFor10 prev cur
+  | otherwise                     = rollForNormal prev cur
+
+  where
+    isDone (Done _) = True
+    isDone _        = False
+
+    rollForNormal :: PendingFrame -> (Index, Roll) -> Either BowlingError [PendingFrame]
+    rollForNormal (Done _) cur     = do
+      r1 <- mkValidRoll1 cur
+      pure $ mkPendingFrame1 r1 : ps
+    rollForNormal (Pend (p:_)) cur = do
+      (r1,r2) <- mkValidRoll2 p cur
+      pure $ mkPendingFrame2 r1 r2 : rest
+
+
+    -- TODO: mkPendingFrame
+    rollFor10First :: (Index, Roll) -> Either BowlingError [PendingFrame]
+    rollFor10First cur = do
+      r1 <- mkValidRoll1 cur
+      pure $ Pend [r1] : ps
+
+    -- TODO: mkPendingFrame
+    rollFor10 :: PendingFrame -> (Index, Roll) -> Either BowlingError [PendingFrame]
+    rollFor10 (Done _) (idx,roll)  = Left $ InvalidRoll idx roll -- prevが0 0 0
+    rollFor10 (Pend [r1]) (idx,roll)
+      | unValidRoll r1 + roll < 10 = do
+          -- 10frameの2投目 2投で終了
+          r2 <- mkValidRoll1 (idx,roll)
+          pure $ Done (Last $ Two (r1,r2)) : rest
+      | otherwise = do
+          -- 10frameの2投目 3投目がある
+          r2 <- mkValidRoll1 (idx,roll)
+          pure $ Pend [r1,r2] : rest
+    rollFor10 (Pend [p,q]) cur = do
+      -- 10frame目 3投で終了
+      (r1,r2,r3) <- mkValidRoll3 p q cur
+      pure $ Done (Last $ Thr (r1,r2,r3)) : rest
 
 
 
