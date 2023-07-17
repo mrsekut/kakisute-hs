@@ -42,7 +42,7 @@ type Index = Int
 -- NOTE: 最後までCommonでいっちゃう
 -- TODO: clean: 分岐が多すぎ
 roll :: [PendingFrame] -> (Index, Roll) -> Either BowlingError [PendingFrame]
-roll [] cur  = (:[]) . mkPendinFrame1 <$> mkValidRoll1 cur
+roll [] cur  = (:[]) . mkPendingFrame1 <$> mkValidRoll1 cur
 roll ps@(prev:rest) (idx,roll)
   | length ps == 9 && isDone prev = rollForLast -- 10 frame目の1投目
   | length ps == 10               = rollForLast' prev
@@ -54,10 +54,10 @@ roll ps@(prev:rest) (idx,roll)
 
     -- TODO: clean
     rollForNormal :: PendingFrame -> Either BowlingError [PendingFrame]
-    rollForNormal (Done _)     = (:ps) . mkPendinFrame1 <$> mkValidRoll1 (idx,roll)
+    rollForNormal (Done _)     = (:ps) . mkPendingFrame1 <$> mkValidRoll1 (idx,roll)
     rollForNormal (Pend (p:_)) = do
       (r1,r2) <- mkValidRoll2 p (idx,roll)
-      pure $ (:rest) (mkPendinFrame2 r1 r2)
+      pure $ (:rest) (mkPendingFrame2 r1 r2)
 
 
 -- TODO: type
@@ -159,15 +159,15 @@ data PendingFrame
 
 
 -- TODO: Done/Pend知ってるのがなあ..
-mkPendinFrame1 :: ValidRoll -> PendingFrame
-mkPendinFrame1 r1
+mkPendingFrame1 :: ValidRoll -> PendingFrame
+mkPendingFrame1 r1
   | unValidRoll r1 == 10 = Done (Normal Strike)
   | otherwise            = Pend [r1]
 
 
 -- TODO: Done/Pend知ってるのがなあ..
-mkPendinFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
-mkPendinFrame2 r1 r2
+mkPendingFrame2 :: ValidRoll -> ValidRoll -> PendingFrame
+mkPendingFrame2 r1 r2
   | unValidRoll (r1 + r2) == 10 = Done $ Normal $ Spare r1
   | otherwise                   = Done $ Normal $ Open (r1, r2)
 
