@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TupleSections              #-}
 
-module Bowling (score, BowlingError(..)) where
+-- https://scrapbox.io/mrsekut-p/Bowling_(exercism)
+module Exercism.Bowling (score, BowlingError(..)) where
 import           Control.Applicative (Applicative (..))
 import           Control.Monad
 import           Control.Monad.State (MonadState (get, put), MonadTrans (lift),
