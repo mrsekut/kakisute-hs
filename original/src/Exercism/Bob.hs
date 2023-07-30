@@ -1,5 +1,7 @@
 module Bob (responseFor) where
-import           Data.Char (isSpace, toUpper)
+
+import           Data.Char (isAlpha, isSpace, isUpper)
+import           Data.List (isSuffixOf)
 
 responseFor :: String -> String
 responseFor xs
@@ -15,7 +17,7 @@ isAllSpace = all isSpace
 
 
 isQuestion :: String -> Bool
-isQuestion xs = last (lastTrim xs) == '?'
+isQuestion = isSuffixOf "?" . lastTrim
   where
     lastTrim :: String -> String
     lastTrim = reverse . startTrim . reverse
@@ -28,9 +30,7 @@ isQuestion xs = last (lastTrim xs) == '?'
 
 
 isYell :: String -> Bool
-isYell xs = hasString xs && isAllUpper xs
+isYell xs = hasLetters xs && isAllUpper xs
   where
-    isAllUpper xs = map toUpper xs == xs
-    hasString = any $ flip elem ['A'..'Z']
-
-
+    isAllUpper = all isUpper . filter isAlpha
+    hasLetters = any isAlpha
