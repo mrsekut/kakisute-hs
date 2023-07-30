@@ -1,5 +1,5 @@
 -- https://exercism.org/tracks/haskell/exercises/pangram
-module Pangram (isPangram) where
+module Exercism.Pangram (isPangram) where
 import           Data.Char (toLower)
 
 

@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.5.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -27,8 +27,12 @@ library
   exposed-modules:
       Bell
       DDD
+      Exercism.Bob
+      Exercism.Bowling
+      Exercism.Pangram
       ExtEff
       Foldable
+      GADT
       GDP.GDP
       GDP.Head
       Generic
