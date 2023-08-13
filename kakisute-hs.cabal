@@ -29,6 +29,7 @@ library
       DDD
       Exercism.Bob
       Exercism.Bowling
+      Exercism.CollatzConjecture
       Exercism.Pangram
       ExtEff
       Foldable
