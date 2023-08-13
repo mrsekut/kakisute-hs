@@ -30,6 +30,7 @@ library
       Exercism.Bob
       Exercism.Bowling
       Exercism.CollatzConjecture
+      Exercism.DNA
       Exercism.Pangram
       ExtEff
       Foldable
