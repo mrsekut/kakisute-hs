@@ -31,6 +31,7 @@ library
       Exercism.Bowling
       Exercism.CollatzConjecture
       Exercism.DNA
+      Exercism.NucleotideCount
       Exercism.Pangram
       Exercism.SumOfMultiples
       ExtEff
