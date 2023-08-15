@@ -27,6 +27,7 @@ library
   exposed-modules:
       Bell
       DDD
+      Exercism.Acronym
       Exercism.Bob
       Exercism.Bowling
       Exercism.Clock
