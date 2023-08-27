@@ -36,6 +36,7 @@ library
       Exercism.Grains
       Exercism.NucleotideCount
       Exercism.Pangram
+      Exercism.Strain
       Exercism.SumOfMultiples
       ExtEff
       Foldable
