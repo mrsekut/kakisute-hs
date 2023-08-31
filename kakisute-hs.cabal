@@ -35,6 +35,7 @@ library
       Exercism.CryptoSquare
       Exercism.DNA
       Exercism.Grains
+      Exercism.Luhn
       Exercism.NucleotideCount
       Exercism.Pangram
       Exercism.Phone
