@@ -1,11 +1,9 @@
 module Phone (number) where
-import           Data.Char (isNumber)
+import           Data.Char (isDigit)
 
 number :: String -> Maybe String
-number xs = checkN =<< checkDigits (normalize xs)
+number xs = checkN =<< checkDigits (filter isDigit xs)
   where
-    normalize = filter isNumber
-
     checkDigits :: String -> Maybe String
     checkDigits xs
       | length xs == 10 = Just xs
@@ -15,5 +13,4 @@ number xs = checkN =<< checkDigits (normalize xs)
     checkN :: String -> Maybe String
     checkN xs = if is then Just xs else Nothing
       where
-        is = all (ok . head) [take 3 xs, drop 3 xs]
-        ok n = not $ n == '0' || n == '1'
+        is = all ((> '1') . head) [take 3 xs, drop 3 xs]
