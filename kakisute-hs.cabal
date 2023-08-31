@@ -37,6 +37,7 @@ library
       Exercism.Grains
       Exercism.NucleotideCount
       Exercism.Pangram
+      Exercism.Phone
       Exercism.Strain
       Exercism.SumOfMultiples
       ExtEff
