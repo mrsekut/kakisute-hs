@@ -39,6 +39,7 @@ library
       Exercism.NucleotideCount
       Exercism.Pangram
       Exercism.Phone
+      Exercism.Prime
       Exercism.Strain
       Exercism.SumOfMultiples
       ExtEff
