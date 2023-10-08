@@ -36,6 +36,7 @@ library
       Exercism.DNA
       Exercism.Grains
       Exercism.Luhn
+      Exercism.Minesweeper
       Exercism.NucleotideCount
       Exercism.Pangram
       Exercism.Phone
