@@ -1,11 +1,10 @@
 module Triangle (rows) where
 
 rows :: Int -> [[Integer]]
-rows 0 = []
-rows 1 = [[1]]
-rows n = prows ++ [next (last prows)]
+rows n = go [] $ replicate n next
   where
-    prows = rows (n-1)
+    go a []     = []
+    go a (f:fs) = f a : go (f a) fs
 
 
 next :: [Integer] -> [Integer]
