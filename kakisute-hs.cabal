@@ -39,6 +39,7 @@ library
       Exercism.Minesweeper
       Exercism.NucleotideCount
       Exercism.Pangram
+      Exercism.PerfectNumbets
       Exercism.Phone
       Exercism.Prime
       Exercism.Strain
