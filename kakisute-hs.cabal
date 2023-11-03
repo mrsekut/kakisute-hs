@@ -42,6 +42,7 @@ library
       Exercism.PerfectNumbets
       Exercism.Phone
       Exercism.Prime
+      Exercism.SecretHandshake
       Exercism.Strain
       Exercism.SumOfMultiples
       Exercism.Triangle
