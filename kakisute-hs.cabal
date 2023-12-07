@@ -36,6 +36,7 @@ library
       Exercism.CryptoSquare
       Exercism.DNA
       Exercism.Grains
+      Exercism.Hamming
       Exercism.Luhn
       Exercism.Minesweeper
       Exercism.NucleotideCount
