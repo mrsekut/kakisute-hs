@@ -30,6 +30,7 @@ library
       Exercism.Acronym
       Exercism.Bob
       Exercism.Bowling
+      Exercism.BST
       Exercism.Clock
       Exercism.CollatzConjecture
       Exercism.CryptoSquare
