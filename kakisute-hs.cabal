@@ -45,6 +45,7 @@ library
       Exercism.Phone
       Exercism.Prime
       Exercism.Queen
+      Exercism.Robot
       Exercism.SecretHandshake
       Exercism.Strain
       Exercism.SumOfMultiples
