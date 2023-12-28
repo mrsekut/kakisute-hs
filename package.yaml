@@ -29,6 +29,9 @@ dependencies:
   - array
   - deepseq
   - containers
+  - split
+  - megaparsec
+  - multiset
 
 library:
   source-dirs: src
