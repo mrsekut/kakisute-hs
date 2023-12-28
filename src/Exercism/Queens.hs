@@ -1,4 +1,4 @@
-module Queens (boardString, canAttack) where
+module Exercism.Queens (boardString, canAttack) where
 
 import           Data.List       (intersperse)
 import           Data.List.Split (chunksOf)

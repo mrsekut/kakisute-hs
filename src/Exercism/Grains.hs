@@ -1,4 +1,4 @@
-module Grains (square, total) where
+module Exercism.Grains (square, total) where
 
 square :: Integer -> Maybe Integer
 square n

@@ -1,4 +1,4 @@
-module Triangle (rows) where
+module Exercism.Triangle (rows) where
 
 rows :: Int -> [[Integer]]
 rows n = go [] $ replicate n next

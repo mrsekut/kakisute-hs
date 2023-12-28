@@ -1,4 +1,4 @@
-module PerfectNumbers (classify, Classification(..)) where
+module Exercism.PerfectNumbers (classify, Classification(..)) where
 
 data Classification = Deficient | Perfect | Abundant deriving (Eq, Show)
 

@@ -1,4 +1,4 @@
-module SecretHandshake where
+module Exercism.SecretHandshake where
 
 handshake :: Int -> [String]
 handshake = toCommand . toRevBins
@@ -12,4 +12,3 @@ handshake = toCommand . toRevBins
     commands xs = [action | (bit, action) <- zip xs actions, bit == 1]
 
     actions = ["wink","double blink","close your eyes","jump"]
-

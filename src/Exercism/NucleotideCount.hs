@@ -1,4 +1,4 @@
-module DNA (nucleotideCounts, Nucleotide(..)) where
+module Exercism.NucleotideCount (nucleotideCounts, Nucleotide(..)) where
 
 import           Data.Map (Map, fromListWith)
 

@@ -1,4 +1,4 @@
-module CollatzConjecture (collatz) where
+module Exercism.CollatzConjecture (collatz) where
 
 collatz :: Integer -> Maybe Integer
 collatz n

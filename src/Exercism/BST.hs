@@ -1,4 +1,4 @@
-module BST
+module Exercism.BST
     ( BST
     , bstLeft
     , bstRight

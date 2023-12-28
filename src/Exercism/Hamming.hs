@@ -1,4 +1,4 @@
-module Hamming (distance) where
+module Exercism.Hamming (distance) where
 
 distance :: String -> String -> Maybe Int
 distance xs ys

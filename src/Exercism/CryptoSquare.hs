@@ -1,4 +1,4 @@
-module CryptoSquare (encode) where
+module Exercism.CryptoSquare (encode) where
 import           Data.Char (isAlphaNum, isSpace, toLower)
 import           Data.List (transpose)
 

@@ -1,4 +1,4 @@
-module Robot
+module Exercism.Robot
     ( Bearing(East,North,South,West)
     , bearing
     , coordinates

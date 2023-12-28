@@ -1,4 +1,4 @@
-module Prime (nth) where
+module Exercism.Prime (nth) where
 
 nth :: Int -> Maybe Integer
 nth 0 = Nothing

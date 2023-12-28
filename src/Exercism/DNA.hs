@@ -1,4 +1,4 @@
-module DNA (toRNA) where
+module Exercism.DNA (toRNA) where
 
 toRNA :: String -> Either Char String
 toRNA = traverse toRNA'

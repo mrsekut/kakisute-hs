@@ -1,4 +1,4 @@
-module SumOfMultiples (sumOfMultiples) where
+module Exercism.SumOfMultiples (sumOfMultiples) where
 import           Data.List (nub)
 
 

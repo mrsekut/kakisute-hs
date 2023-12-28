@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Acronym (abbreviate) where
+module Exercism.Acronym (abbreviate) where
 
 import qualified Data.Char  as C
 import           Data.Maybe (mapMaybe)

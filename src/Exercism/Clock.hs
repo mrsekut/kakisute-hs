@@ -1,4 +1,4 @@
-module Clock (addDelta, fromHourMin, toString) where
+module Exercism.Clock (addDelta, fromHourMin, toString) where
 import           Text.Printf (printf)
 
 

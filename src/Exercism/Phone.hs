@@ -1,4 +1,4 @@
-module Phone (number) where
+module Exercism.Phone (number) where
 import           Data.Char (isDigit)
 
 number :: String -> Maybe String

@@ -1,4 +1,4 @@
-module Minesweeper (annotate) where
+module Exercism.Minesweeper (annotate) where
 import           Data.Char (intToDigit)
 import           Data.List (find)
 
