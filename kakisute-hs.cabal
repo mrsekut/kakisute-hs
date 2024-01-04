@@ -51,6 +51,7 @@ library
       Exercism.SumOfMultiples
       Exercism.Triangle
       Exercism.WordCount
+      Exercism.WordProblem
       ExtEff
       Foldable
       GADT
