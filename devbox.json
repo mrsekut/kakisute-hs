@@ -1,0 +1,14 @@
+{
+	"packages": [
+		"ghc@latest",
+		"gmp@latest",
+		"stack@latest",
+		"cabal-install@latest",
+		"zlib@latest",
+		"hpack@latest",
+		"haskell-language-server@latest"
+	],
+	"env": {
+		"PATH": "$PATH:/usr/bin"
+	}
+}
