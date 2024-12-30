@@ -3,16 +3,14 @@ module BinarySearch (find) where
 import           Data.Array
 
 find :: Ord a => Array Int a -> a -> Maybe Int
-find as n = find' ord (bounds as)
-  where
-    ord i = compare n (as ! i)
+find as n = binSearch as n (bounds as)
 
-find' :: (Int -> Ordering) -> (Int,Int) -> Maybe Int
-find' f (si,ei) | si > ei    = Nothing
-find' f (si,ei) = case f mi of
+binSearch :: Ord a => Array Int a -> a -> (Int,Int) -> Maybe Int
+binSearch as n (si,ei) | si > ei    = Nothing
+binSearch as n (si,ei) = case compare n (as ! mi) of
   EQ -> Just mi
-  LT -> find' f (si,mi-1)
-  GT -> find' f (mi+1,ei)
+  LT -> binSearch as n (si,mi-1)
+  GT -> binSearch as n (mi+1,ei)
   where
     l = ei - si + 1
     mi = (si + ei) `div` 2
