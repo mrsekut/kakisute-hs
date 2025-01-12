@@ -1,12 +1,8 @@
-module Exercism.SumOfMultiples (sumOfMultiples) where
+module SumOfMultiples (sumOfMultiples) where
 import           Data.List (nub)
 
-
 sumOfMultiples :: [Integer] -> Integer -> Integer
-sumOfMultiples factors limit = sum . nub . concatMap (`candidates` limit) $ factors
-
-
-candidates :: Integer -> Integer -> [Integer]
-candidates 0   lim = []
-candidates fac lim = takeWhile (< lim) $ map (*fac) [1..]
-
+sumOfMultiples factors limit = sum . nub . concatMap (takeWhile (< limit) . muls) $ factors
+  where
+    muls 0 = [0]
+    muls n = map (* n) [1..]
