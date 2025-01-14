@@ -4,14 +4,14 @@ import           Data.Char (isAlpha, ord, toUpper)
 
 diamond :: Char -> Maybe [String]
 diamond c
-  | isAlpha c = Just . mirror . map mirror . triangleTopLeft $ c
+  | isAlpha c = Just . mirror . map mirror . stairs $ c
   | otherwise = Nothing
 
-triangleTopLeft :: Char -> [String]
-triangleTopLeft x = foldl go [] ['A'..x]
+stairs :: Char -> [String]
+stairs endChar = foldl go [] ['A'..endChar]
   where
-    go rs c = map (expands 1 0) rs ++ [expands 0 (length rs) [c]]
-    expands n m t = replicate n ' ' <> t <> replicate m ' '
+    go acc c = map (pad 1 ++) acc ++ [c : pad (length acc)]
+    pad n = replicate n ' '
 
 mirror :: [a] -> [a]
 mirror xs = init xs ++ reverse xs
