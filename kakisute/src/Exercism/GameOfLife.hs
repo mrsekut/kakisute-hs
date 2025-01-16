@@ -16,17 +16,35 @@ conway (1,n)
   | otherwise = 0
 
 
+-- >>> neighborhoodSum [[1,2,3],[4,5,6],[7,8,9]]
+-- [[12,21,16],[27,45,33],[24,39,28]]
 neighborhoodSum :: [[Int]] -> [[Int]]
-neighborhoodSum = rowSum . colSum
+neighborhoodSum = map smoothCols . smoothRows
   where
-    colSum = map windows3Sum
-    rowSum = transpose . map  windows3Sum. transpose
+    smoothCols = trips add3 0
+    smoothRows = trips (zipWith3 add3) (repeat 0)
+    add3 a b c = a + b + c
 
-windows3Sum :: [Int] -> [Int]
-windows3Sum = map sum . windows3 . padding
+-- 1次元リストの各要素について、前後3つを取り出して関数を適用。
+-- >>> trips add3 0 [1,2,3,4,5]
+-- [3,6,9,12,9]
+trips :: (a -> a -> a -> b) -> a -> [a] -> [b]
+trips f border = triples f . padding border
 
+-- リストを3要素ずつに分割し、各3要素に関数 f を適用。
+-- >>> triples add3 [1,2,3,4,5]
+-- [6,9,12]
+triples:: (a -> a -> a -> b) -> [a] -> [b]
+triples f = map (\[a,b,c] -> f a b c) . windows3
+
+add3 a b c = a + b + c
+
+-- >>> padding 0 [1,2,3]
+-- [0,1,2,3,0]
+padding :: a -> [a] -> [a]
+padding border xs = border : xs ++ [border]
+
+-- >>> windows3 [1,2,3,4,5]
+-- [[1,2,3],[2,3,4],[3,4,5]]
 windows3 :: [a] -> [[a]]
-windows3 xs = [ [x, y, z] | (x:y:z:_) <- tails xs ]
-
-padding :: [Int] -> [Int]
-padding xs = 0 : xs ++ [0]
+windows3 = filter (\x -> length x >= 3) . map (take 3) . tails
